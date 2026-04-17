@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
+    use \App\Traits\BelongsToStore;
+
     protected $fillable = ['name'];
 
     public function products()

@@ -10,44 +10,80 @@ use Illuminate\Support\Facades\DB;
 class TransactionService
 {
     /**
-     * Process the core POS checkout logic including stock reduction.
+     * Process checkout with server-side total recalculation.
+     * NEVER trust frontend-submitted totals.
      */
-    public function processCheckout(array $data)
+    public function processCheckout(array $data): Transaction
     {
         return DB::transaction(function () use ($data) {
-            // Kalkulasi uang kembali khusus Cash
-            $return_amount = $data['payment_method'] === 'QRIS' ? 0 : ($data['pay_amount'] - $data['total_amount']);
+            // 1. Recalculate subtotal dari database (TIDAK percaya frontend)
+            $serverSubtotal = 0;
+            $cartItems = [];
 
-            // 1. Simpan header transaksi
+            foreach ($data['cart'] as $item) {
+                $product = Product::lockForUpdate()->findOrFail($item['id']);
+                
+                if ($product->stock < $item['qty']) {
+                    throw new \Exception("Stok \"{$product->name}\" tidak cukup. Sisa: {$product->stock}");
+                }
+
+                $serverSubtotal += $product->price * $item['qty'];
+                $cartItems[] = [
+                    'product' => $product,
+                    'qty' => (int)$item['qty'],
+                    'price' => $product->price, // Gunakan harga dari DB, bukan frontend
+                ];
+            }
+
+            // 2. Recalculate discount & tax
+            $discount = min(max(0, (float)$data['discount']), $serverSubtotal);
+            $afterDiscount = $serverSubtotal - $discount;
+            
+            $taxPercent = isset($data['tax_percent']) ? max(0, (float)$data['tax_percent']) : 0;
+            // Fallback: jika tax_percent tidak dikirim, hitung dari nominal tax yang dikirim
+            if ($taxPercent == 0 && isset($data['tax']) && $afterDiscount > 0) {
+                $taxPercent = ($data['tax'] / $afterDiscount) * 100;
+            }
+            $tax = round($afterDiscount * $taxPercent / 100);
+            
+            $totalAmount = $afterDiscount + $tax;
+
+            // 3. Validasi pembayaran
+            $payAmount = (float)$data['pay_amount'];
+            $paymentMethod = $data['payment_method'];
+            
+            if ($paymentMethod === 'QRIS') {
+                $payAmount = $totalAmount; // QRIS selalu uang pas
+            }
+
+            if ($payAmount < $totalAmount) {
+                throw new \Exception("Pembayaran kurang. Total: {$totalAmount}, Dibayar: {$payAmount}");
+            }
+
+            $returnAmount = $paymentMethod === 'QRIS' ? 0 : ($payAmount - $totalAmount);
+
+            // 4. Simpan transaksi
             $transaction = Transaction::create([
-                'total_amount' => $data['total_amount'],
-                'discount' => $data['discount'],
-                'tax' => $data['tax'],
-                'pay_amount' => $data['pay_amount'],
-                'return_amount' => $return_amount,
-                'payment_method' => $data['payment_method'],
+                'total_amount' => $totalAmount,
+                'discount' => $discount,
+                'tax' => $tax,
+                'pay_amount' => $payAmount,
+                'return_amount' => $returnAmount,
+                'payment_method' => $paymentMethod,
             ]);
 
-            // 2. Loop keranjang belanja
-            foreach ($data['cart'] as $item) {
-                // Simpan detail (history item dibeli)
+            // 5. Simpan detail dan kurangi stok
+            foreach ($cartItems as $cartItem) {
                 TransactionDetail::create([
                     'transaction_id' => $transaction->id,
-                    'product_id' => $item['id'],
-                    'qty' => $item['qty'],
-                    'price' => $item['price'],
-                    'subtotal' => $item['qty'] * $item['price'],
+                    'product_id' => $cartItem['product']->id,
+                    'qty' => $cartItem['qty'],
+                    'price' => $cartItem['price'],
+                    'subtotal' => $cartItem['price'] * $cartItem['qty'],
                 ]);
 
-                // 3. Kurangi stok berbasis Pessimistic Locking demi Data Integrity
-                $product = Product::lockForUpdate()->find($item['id']);
-                if ($product && $product->stock >= $item['qty']) {
-                    $product->stock -= $item['qty'];
-                    $product->save();
-                } else {
-                    // Batalkan seluruh transaksi jika ada anomali (stok kurang saat diklik bersamaan oleh kasir lain)
-                    throw new \Exception("Stok produk {$item['name']} tidak mencukupi saat proses pembayaran.");
-                }
+                $cartItem['product']->stock -= $cartItem['qty'];
+                $cartItem['product']->save();
             }
 
             return $transaction;

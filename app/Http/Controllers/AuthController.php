@@ -9,9 +9,6 @@ class AuthController extends Controller
 {
     public function login()
     {
-        if (Auth::check()) {
-            return redirect()->route('dashboard');
-        }
         return view('auth.login');
     }
 
@@ -22,21 +19,22 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials, $request->remember)) {
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            return redirect()->intended('dashboard')->with('success', 'Selamat datang, ' . Auth::user()->name);
+            return redirect()->intended('dashboard')->with('success', 'Selamat datang, ' . Auth::user()->name . '!');
         }
 
         return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
+            'email' => 'Email atau password salah.',
         ])->onlyInput('email');
     }
 
+    // FIXED: Sekarang hanya menerima POST request
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('login')->with('success', 'Berhasil keluar');
+        return redirect()->route('login')->with('success', 'Berhasil keluar dari sistem.');
     }
 }

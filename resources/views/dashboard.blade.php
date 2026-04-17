@@ -1,67 +1,91 @@
-@extends('layouts.master', ['title' => 'Dashboard Utama'])
+@extends('layouts.master', ['title' => 'Dashboard'])
 
 @section('content')
-<div class="row align-items-stretch">
-    <!-- Card Pendapatan -->
-    <div class="col-xl-4 col-md-6 mb-4">
-        <div class="card h-100 border-0 shadow-sm" style="border-left: 5px solid #28a745 !important;">
-            <div class="card-body d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <p class="text-uppercase text-muted fw-bold mb-1" style="font-size: 0.8rem;">Pendapatan Hari Ini</p>
-                    <h3 class="mb-0 fw-bold text-dark">Rp {{ number_format($totalSales, 0, ',', '.') }}</h3>
+<!-- Stats Row -->
+<div class="row g-4 mb-4 animate-in">
+    <div class="col-xl-4 col-md-6">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon" style="background:rgba(34,197,94,.1);color:#16a34a;">
+                    <i class="fa-solid fa-wallet"></i>
                 </div>
-                <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success ms-2">
-                    <i class="fa-solid fa-wallet fa-2x"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Card Transaksi -->
-    <div class="col-xl-4 col-md-6 mb-4">
-        <div class="card h-100 border-0 shadow-sm" style="border-left: 5px solid #3498db !important;">
-            <div class="card-body d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <p class="text-uppercase text-muted fw-bold mb-1" style="font-size: 0.8rem;">Transaksi Hari Ini</p>
-                    <h3 class="mb-0 fw-bold text-dark">{{ $todayTransactions->count() }} <small class="text-muted fs-6">Order</small></h3>
-                </div>
-                <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary ms-2">
-                    <i class="fa-solid fa-file-invoice-dollar fa-2x"></i>
+                <div>
+                    <div class="stat-label">Pendapatan Hari Ini</div>
+                    <div class="stat-value text-success">Rp {{ number_format($totalSales, 0, ',', '.') }}</div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Card Placeholder Laporan -->
-    <div class="col-xl-4 col-md-6 mb-4">
+    <div class="col-xl-4 col-md-6">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon" style="background:rgba(99,102,241,.1);color:#6366f1;">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+                <div>
+                    <div class="stat-label">Total Transaksi</div>
+                    <div class="stat-value" style="color:#6366f1;">{{ $todayTransactions->count() }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6">
         <a href="{{ route('reports.index') }}" class="text-decoration-none">
-        <div class="card h-100 border-0 shadow-sm" style="border-left: 5px solid #f39c12 !important;">
-            <div class="card-body d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <p class="text-uppercase text-muted fw-bold mb-1" style="font-size: 0.8rem;">Laporan & Analitik</p>
-                    <h3 class="mb-0 fw-bold text-dark text-muted fs-5">Lihat Detail <i class="fa-solid fa-arrow-right fs-6"></i></h3>
-                </div>
-                <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning ms-2">
-                    <i class="fa-solid fa-chart-pie fa-2x"></i>
+            <div class="card stat-card h-100">
+                <div class="card-body d-flex align-items-center gap-3 p-4">
+                    <div class="stat-icon" style="background:rgba(245,158,11,.1);color:#f59e0b;">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <div class="stat-label">Laporan Lengkap</div>
+                        <div class="stat-value text-dark" style="font-size:1rem;">Lihat Analitik <i class="fa-solid fa-arrow-right ms-1" style="font-size:.8rem;"></i></div>
+                    </div>
                 </div>
             </div>
-        </div>
         </a>
     </div>
 </div>
 
-<!-- Welcome Message -->
-<div class="row mt-2 mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-body bg-light rounded px-4 py-4 d-flex align-items-center">
-                <div class="me-4 text-primary d-none d-md-block">
-                    <i class="fa-solid fa-rocket fa-4x"></i>
+<!-- Quick Actions -->
+<div class="row g-4 animate-in" style="animation-delay:.15s;">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3"><i class="fa-solid fa-bolt text-warning me-2"></i>Aksi Cepat</h6>
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <a href="{{ route('pos.index') }}" class="btn btn-primary w-100 py-3">
+                            <i class="fa-solid fa-cash-register d-block mb-1" style="font-size:1.4rem;"></i>
+                            Buka Kasir
+                        </a>
+                    </div>
+                    <div class="col-sm-4">
+                        <a href="{{ route('products.index') }}" class="btn btn-ghost w-100 py-3">
+                            <i class="fa-solid fa-box-open d-block mb-1" style="font-size:1.4rem;"></i>
+                            Tambah Produk
+                        </a>
+                    </div>
+                    <div class="col-sm-4">
+                        <a href="{{ route('pos.history') }}" class="btn btn-ghost w-100 py-3">
+                            <i class="fa-solid fa-clock-rotate-left d-block mb-1" style="font-size:1.4rem;"></i>
+                            Lihat Riwayat
+                        </a>
+                    </div>
                 </div>
-                <div>
-                    <h5 class="fw-bold mb-1">Selamat Datang di Sistem Kasir Pro!</h5>
-                    <p class="text-muted mb-0">Antarmuka baru ini menggunakan konsep <i>Clean Sidebar Layout</i> yang jauh lebih profesional. Semua fitur bisa diakses dengan mudah lewat panel di sebelah kiri. Kita akan segera mengembangkan fitur tambahan pada tahapan berikutnya.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;">
+            <div class="card-body p-4 d-flex flex-column justify-content-center">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <i class="fa-solid fa-rocket" style="font-size:2rem;opacity:.8;"></i>
+                    <div>
+                        <h6 class="fw-bold mb-0" style="color:#fff;">Kasir Pro v2.0</h6>
+                        <small style="opacity:.8;">Antarmuka Premium Edition</small>
+                    </div>
                 </div>
+                <p class="mb-0 mt-2" style="font-size:.82rem;opacity:.85;">Kelola transaksi cafe Anda dengan cepat, akurat, dan profesional.</p>
             </div>
         </div>
     </div>

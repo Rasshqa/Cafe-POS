@@ -49,4 +49,48 @@ class ReportController extends Controller
             'chartLabels', 'chartValues', 'topProducts'
         ));
     }
+
+    public function export(Request $request)
+    {
+        $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : Carbon::now()->startOfMonth();
+        $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::now()->endOfDay();
+
+        $transactions = Transaction::with('user')->whereBetween('created_at', [$startDate, $endDate])->orderBy('created_at')->get();
+
+        $filename = "Laporan_Penjualan_" . $startDate->format('d-M-Y') . "_sampai_" . $endDate->format('d-M-Y') . ".csv";
+
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$filename",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['ID Trx', 'Tanggal', 'Kasir', 'Total (Rp)', 'Diskon (Rp)', 'Pajak (Rp)', 'Dibayar (Rp)', 'Kembali (Rp)', 'Metode'];
+
+        $callback = function() use($transactions, $columns) {
+            $file = fopen('php://output', 'w');
+            // Menambahkan BOM untuk UTF-8 di Excel
+            fputs($file, "\xEF\xBB\xBF");
+            fputcsv($file, $columns, ';'); // Gunakan semicolon untuk standar Excel lokalisasi ID
+
+            foreach ($transactions as $t) {
+                fputcsv($file, [
+                    '#' . str_pad($t->id, 5, '0', STR_PAD_LEFT),
+                    $t->created_at->format('d/m/Y H:i:s'),
+                    $t->user->name ?? 'Admin',
+                    $t->total_amount,
+                    $t->discount,
+                    $t->tax,
+                    $t->pay_amount,
+                    $t->return_amount,
+                    $t->payment_method
+                ], ';');
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

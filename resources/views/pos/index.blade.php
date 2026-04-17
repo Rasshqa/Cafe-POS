@@ -1,41 +1,41 @@
-@extends('layouts.master', ['title' => 'Mesin Kasir (POS)'])
+@extends('layouts.master', ['title' => 'Kasir'])
 
 @section('content')
-<!-- Jika ada print_id yang di return -->
 @if(session('print_id'))
-    <script>
-        window.open("{{ route('pos.receipt', session('print_id')) }}", "ReceiptWindow", "width=400,height=600");
-    </script>
+<script>window.open("{{ route('pos.receipt', session('print_id')) }}", "Receipt", "width=420,height=650");</script>
 @endif
 
-<div class="row h-100">
-    <!-- Area Kiri: Daftar Menu (Produk) -->
-    <div class="col-xl-7 col-lg-7">
-        <!-- Search & Filter bar bisa ditambahkan di sini kedepannya -->
-        <h5 class="mb-3 fw-bold text-secondary">Daftar Menu</h5>
-        
-        <div class="row g-3" style="max-height: 80vh; overflow-y: auto;">
+<div class="row g-4" style="min-height:calc(100vh - 120px);">
+    <!-- LEFT: Products Grid -->
+    <div class="col-lg-7 col-xl-7">
+        <div class="d-flex align-items-center justify-content-between mb-3 animate-in">
+            <h5 class="fw-bold mb-0">Daftar Menu</h5>
+            <div class="input-group" style="max-width:220px;">
+                <span class="input-group-text border-end-0 bg-white"><i class="fa-solid fa-search text-muted" style="font-size:.8rem;"></i></span>
+                <input type="text" class="form-control border-start-0 ps-0" placeholder="Cari menu..." id="searchProduct" onkeyup="filterProducts()" style="font-size:.85rem;">
+            </div>
+        </div>
+
+        <div class="row g-3" id="productGrid" style="max-height:calc(100vh - 180px);overflow-y:auto;padding-right:4px;">
             @forelse($products as $product)
-            <div class="col-md-4 col-sm-6">
-                <div class="card h-100 border-0 shadow-sm cursor-pointer product-card" 
+            <div class="col-lg-4 col-md-4 col-sm-6 product-item" data-name="{{ strtolower($product->name) }}">
+                <div class="card h-100 product-card animate-in" style="cursor:pointer;animation-delay:{{ $loop->index * 0.03 }}s;"
                      onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, {{ $product->stock }})">
-                    <!-- Tampilkan Gambar -->
                     @if($product->image)
-                        <img src="{{ asset('storage/'.$product->image) }}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="{{ $product->name }}">
+                        <img src="{{ asset('storage/'.$product->image) }}" class="card-img-top" style="height:110px;object-fit:cover;" alt="">
                     @else
-                        <div class="bg-light d-flex justify-content-center align-items-center w-100" style="height: 120px;">
-                            <i class="fa-solid fa-utensils fa-3x text-secondary opacity-25"></i>
+                        <div class="d-flex align-items-center justify-content-center" style="height:110px;background:#f8fafc;">
+                            <i class="fa-solid fa-mug-saucer fa-2x" style="color:#e2e8f0;"></i>
                         </div>
                     @endif
-
                     <div class="card-body p-3 text-center">
-                        <h6 class="fw-bold mb-1 text-truncate" title="{{ $product->name }}">{{ $product->name }}</h6>
-                        <span class="text-primary fw-bold">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                        <div class="fw-semibold text-truncate mb-1" style="font-size:.85rem;" title="{{ $product->name }}">{{ $product->name }}</div>
+                        <div class="fw-bold" style="color:#6366f1;font-size:.9rem;">Rp {{ number_format($product->price, 0, ',', '.') }}</div>
                         <div class="mt-2">
                             @if($product->stock > 0)
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success">Stok: {{ $product->stock }}</span>
+                                <span class="badge bg-success bg-opacity-10 text-success" style="font-size:.68rem;">Stok {{ $product->stock }}</span>
                             @else
-                                <span class="badge bg-danger">Habis</span>
+                                <span class="badge bg-danger bg-opacity-10 text-danger" style="font-size:.68rem;">Habis</span>
                             @endif
                         </div>
                     </div>
@@ -43,91 +43,79 @@
             </div>
             @empty
             <div class="col-12">
-                <div class="alert alert-secondary text-center py-5">
-                    <i class="fa-solid fa-basket-shopping fa-3x mb-3 text-muted"></i><br>
-                    Data produk belum tersedia.
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-mug-hot fa-3x mb-3 opacity-25"></i>
+                    <div>Belum ada produk tersedia</div>
                 </div>
             </div>
             @endforelse
         </div>
     </div>
-    
-    <!-- Area Kanan: Keranjang Belanja & Pembayaran -->
-    <div class="col-xl-5 col-lg-5">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-cart-shopping text-warning me-2"></i> Pesanan</h5>
-                <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="clearCart()">Clear</button>
-            </div>
-            
-            <!-- List Cart -->
-            <div class="card-body p-0">
-                <div class="table-responsive" style="min-height: 250px; max-height: 250px; overflow-y: auto;">
-                    <table class="table table-hover align-middle mb-0">
-                        <tbody id="cartItems">
-                            <!-- Di-render oleh Javascript -->
-                        </tbody>
-                    </table>
-                </div>
+
+    <!-- RIGHT: Cart Panel -->
+    <div class="col-lg-5 col-xl-5">
+        <div class="card h-100 d-flex flex-column animate-in" style="animation-delay:.15s;">
+            <!-- Cart Header -->
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4" style="border-bottom:1px solid #f1f5f9;">
+                <h6 class="fw-bold mb-0"><i class="fa-solid fa-cart-shopping me-2" style="color:#f59e0b;"></i>Pesanan <span class="badge rounded-pill ms-1" style="background:#f1f5f9;color:#64748b;font-size:.7rem;" id="cartCount">0</span></h6>
+                <button class="btn btn-sm btn-ghost text-danger px-2" onclick="clearCart()" title="Clear semua"><i class="fa-solid fa-trash-can"></i></button>
             </div>
 
-            <!-- Panel Kalkulasi -->
-            <div class="card-footer bg-light p-4 border-top-0">
+            <!-- Cart Items -->
+            <div class="flex-grow-1 overflow-auto" style="min-height:200px;max-height:320px;">
+                <table class="table table-hover align-middle mb-0">
+                    <tbody id="cartItems"></tbody>
+                </table>
+            </div>
+
+            <!-- Payment Panel -->
+            <div class="p-4" style="background:#f8fafc;border-top:1px solid #f1f5f9;">
                 <form action="{{ route('pos.store') }}" method="POST" id="checkoutForm">
                     @csrf
                     <div id="hiddenInputs"></div>
 
-                    <!-- Ringkasan Angka -->
-                    <div class="d-flex justify-content-between mb-2 text-muted">
+                    <div class="d-flex justify-content-between mb-1" style="font-size:.85rem;color:#64748b;">
                         <span>Subtotal</span>
                         <span id="subtotalDisplay">Rp 0</span>
                         <input type="hidden" name="subtotal" id="subtotalInput" value="0">
                     </div>
 
-                    <!-- Input Diskon & Pajak (Interaktif) -->
-                    <div class="row g-2 mb-3">
+                    <div class="row g-2 mb-2">
                         <div class="col-6">
-                            <label class="form-label small text-muted mb-1">Diskon (Rp)</label>
-                            <input type="number" class="form-control form-control-sm" id="discountInputRaw" name="discount" value="0" min="0" onkeyup="calculateGrandTotal()" onchange="calculateGrandTotal()">
+                            <label class="form-label" style="font-size:.72rem;">Diskon (Rp)</label>
+                            <input type="number" class="form-control form-control-sm" id="discountInputRaw" name="discount" value="0" min="0" onkeyup="calcTotal()" onchange="calcTotal()">
                         </div>
                         <div class="col-6">
-                            <label class="form-label small text-muted mb-1">Pajak (%)</label>
+                            <label class="form-label" style="font-size:.72rem;">Pajak (%)</label>
                             <div class="input-group input-group-sm">
-                                <input type="number" class="form-control" id="taxPercentage" value="0" min="0" onkeyup="calculateGrandTotal()" onchange="calculateGrandTotal()">
+                                <input type="number" class="form-control" id="taxPercentage" name="tax_percent" value="{{ $defaultTax ?? 0 }}" min="0" onkeyup="calcTotal()" onchange="calcTotal()">
                                 <span class="input-group-text">%</span>
                             </div>
                             <input type="hidden" name="tax" id="taxNominalInput" value="0">
                         </div>
                     </div>
 
-                    <hr>
-
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4 class="fw-bold mb-0">Total Tagihan</h4>
-                        <h3 class="fw-bold text-primary mb-0" id="totalDisplay">Rp 0</h3>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pt-2" style="border-top:2px solid #e2e8f0;">
+                        <span class="fw-bold" style="font-size:1.05rem;">Total</span>
+                        <span class="fw-bold" style="font-size:1.3rem;color:#6366f1;" id="totalDisplay">Rp 0</span>
                         <input type="hidden" name="total_amount" id="totalAmountInput" value="0">
                     </div>
-                    
-                    <!-- Metode Pembayaran -->
-                    <div class="mb-3">
-                        <h6 class="fw-bold mb-2">Metode Pembayaran</h6>
-                        <div class="btn-group w-100" role="group">
-                            <input type="radio" class="btn-check" name="payment_method" id="payCash" value="Cash" checked onclick="togglePaymentMethod('Cash')">
-                            <label class="btn btn-outline-primary" for="payCash"><i class="fa-solid fa-money-bill-wave me-1"></i> Tunai (Cash)</label>
 
-                            <input type="radio" class="btn-check" name="payment_method" id="payQris" value="QRIS" onclick="togglePaymentMethod('QRIS')">
-                            <label class="btn btn-outline-primary" for="payQris"><i class="fa-solid fa-qrcode me-1"></i> QRIS / Digital</label>
-                        </div>
+                    <!-- Payment Method -->
+                    <div class="btn-group w-100 mb-3" role="group">
+                        <input type="radio" class="btn-check" name="payment_method" id="payCash" value="Cash" checked onclick="togglePay('Cash')">
+                        <label class="btn btn-outline-secondary btn-sm" for="payCash"><i class="fa-solid fa-money-bill-wave me-1"></i> Cash</label>
+                        <input type="radio" class="btn-check" name="payment_method" id="payQris" value="QRIS" onclick="togglePay('QRIS')">
+                        <label class="btn btn-outline-secondary btn-sm" for="payQris"><i class="fa-solid fa-qrcode me-1"></i> QRIS</label>
                     </div>
 
-                    <!-- Input Jumlah Uang Cash -->
-                    <div class="mb-4" id="cashInputBox">
-                        <label class="fw-bold mb-2">Uang Diterima (Rp)</label>
+                    <div id="cashInputBox" class="mb-3">
+                        <label class="form-label">Uang Diterima</label>
                         <input type="number" name="pay_amount" id="payAmountInput" class="form-control form-control-lg text-end fw-bold" placeholder="0" min="0" required>
                     </div>
 
-                    <button type="button" class="btn btn-success w-100 fw-bold py-3 fs-5 rounded-pill shadow-sm" onclick="processCheckout()">
-                        <i class="fa-solid fa-check-circle me-2"></i> Bayar & Cetak Struk
+                    <button type="button" class="btn btn-primary w-100 py-3" style="font-size:1rem;" id="checkoutBtn" onclick="processCheckout()">
+                        <i class="fa-solid fa-check-circle me-2"></i>Bayar & Cetak Struk
                     </button>
                 </form>
             </div>
@@ -135,181 +123,169 @@
     </div>
 </div>
 
+@push('styles')
 <style>
-    /* Efect Hover untuk Card Menu */
-    .product-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;}
-    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;}
-    .product-card:active { transform: scale(0.98); }
+    .product-card { transition: transform .2s, box-shadow .2s; border: 1px solid #f1f5f9; }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,.08) !important; border-color: #c7d2fe; }
+    .product-card:active { transform: scale(.97); }
+    .cart-add-flash { animation: cartFlash .4s ease-out; }
+    @keyframes cartFlash { 0%{background:#eef2ff;} 100%{background:transparent;} }
 </style>
+@endpush
 @endsection
 
 @push('scripts')
 <script>
-    let cart = [];
+let cart = [];
+let isProcessing = false; // Anti double-click guard
 
-    function formatRupiah(number) {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+function fmt(n) {
+    return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n);
+}
+
+function filterProducts() {
+    const q = document.getElementById('searchProduct').value.toLowerCase();
+    document.querySelectorAll('.product-item').forEach(el => {
+        el.style.display = el.dataset.name.includes(q) ? '' : 'none';
+    });
+}
+
+function addToCart(id, name, price, stock) {
+    if (stock <= 0) return showToast('Stok habis!','danger');
+    let item = cart.find(i => i.id === id);
+    if (item) {
+        if (item.qty >= stock) return showToast('Melebihi stok!','warning');
+        item.qty++;
+    } else {
+        cart.push({id, name, price, qty: 1, stock});
+    }
+    renderCart();
+}
+
+function updateQty(id, delta) {
+    let idx = cart.findIndex(i => i.id === id);
+    if (idx < 0) return;
+    let item = cart[idx];
+    let nq = item.qty + delta;
+    if (nq <= 0) cart.splice(idx, 1);
+    else if (nq > item.stock) return showToast('Stok tidak cukup!','warning');
+    else item.qty = nq;
+    renderCart();
+}
+
+function clearCart() {
+    if (cart.length === 0) return;
+    cart = [];
+    renderCart();
+}
+
+function togglePay(method) {
+    let box = document.getElementById('cashInputBox');
+    if (method === 'QRIS') {
+        box.style.display = 'none';
+        document.getElementById('payAmountInput').value = document.getElementById('totalAmountInput').value;
+    } else {
+        box.style.display = 'block';
+        document.getElementById('payAmountInput').value = '';
+    }
+}
+
+function renderCart() {
+    let body = document.getElementById('cartItems');
+    let hidden = document.getElementById('hiddenInputs');
+    let sub = 0;
+    body.innerHTML = '';
+    hidden.innerHTML = '';
+
+    if (!cart.length) {
+        body.innerHTML = `<tr><td class="text-center py-5 text-muted">
+            <i class="fa-solid fa-cart-shopping fa-2x mb-2 opacity-25"></i><br>
+            <span style="font-size:.85rem;">Belum ada pesanan</span></td></tr>`;
     }
 
-    function addToCart(id, name, price, stock) {
-        if(stock <= 0) {
-            alert('Produk ini kehabisan stok!');
-            return;
-        }
+    cart.forEach((item, i) => {
+        let s = item.price * item.qty;
+        sub += s;
+        body.innerHTML += `
+        <tr class="cart-add-flash">
+            <td class="px-4 py-3" style="max-width:140px;">
+                <div class="fw-semibold text-truncate" style="font-size:.85rem;" title="${item.name}">${item.name}</div>
+                <small class="text-muted">${fmt(item.price)}</small>
+            </td>
+            <td width="110">
+                <div class="input-group input-group-sm">
+                    <button class="btn btn-outline-secondary px-2" type="button" onclick="updateQty(${item.id},-1)">−</button>
+                    <input type="text" class="form-control text-center fw-bold bg-white px-0" value="${item.qty}" readonly style="max-width:36px;">
+                    <button class="btn btn-outline-secondary px-2" type="button" onclick="updateQty(${item.id},1)">+</button>
+                </div>
+            </td>
+            <td class="text-end fw-bold pe-3" style="font-size:.85rem;">${fmt(s)}</td>
+            <td width="36"><button class="btn btn-sm p-0 text-danger" onclick="updateQty(${item.id},-${item.qty})"><i class="fa-solid fa-xmark"></i></button></td>
+        </tr>`;
+        hidden.innerHTML += `
+            <input type="hidden" name="cart[${i}][id]" value="${item.id}">
+            <input type="hidden" name="cart[${i}][qty]" value="${item.qty}">
+            <input type="hidden" name="cart[${i}][price]" value="${item.price}">
+            <input type="hidden" name="cart[${i}][name]" value="${item.name}">`;
+    });
 
-        let existingItem = cart.find(item => item.id === id);
-        if (existingItem) {
-            if (existingItem.qty < stock) {
-                existingItem.qty += 1;
-            } else {
-                alert('Melebihi sisa stok yang ada di database!');
-            }
-        } else {
-            cart.push({ id, name, price, qty: 1, stock });
-        }
-        renderCart();
+    document.getElementById('subtotalDisplay').innerText = fmt(sub);
+    document.getElementById('subtotalInput').value = sub;
+    document.getElementById('cartCount').innerText = cart.reduce((a,b)=>a+b.qty,0);
+    calcTotal();
+}
+
+function calcTotal() {
+    let sub = parseInt(document.getElementById('subtotalInput').value) || 0;
+    let disc = parseInt(document.getElementById('discountInputRaw').value) || 0;
+    let taxP = parseFloat(document.getElementById('taxPercentage').value) || 0;
+    if (disc > sub) { disc = sub; document.getElementById('discountInputRaw').value = disc; }
+    let after = sub - disc;
+    let tax = (after * taxP) / 100;
+    document.getElementById('taxNominalInput').value = Math.round(tax);
+    let total = Math.round(after + tax);
+    document.getElementById('totalDisplay').innerText = fmt(total);
+    document.getElementById('totalAmountInput').value = total;
+    if (document.querySelector('input[name="payment_method"]:checked').value === 'QRIS') {
+        document.getElementById('payAmountInput').value = total;
     }
+}
 
-    function updateQty(id, change) {
-        let itemIndex = cart.findIndex(item => item.id === id);
-        if (itemIndex > -1) {
-            let item = cart[itemIndex];
-            let newQty = item.qty + change;
-            
-            if (newQty > 0 && newQty <= item.stock) {
-                item.qty = newQty;
-            } else if (newQty === 0) {
-                cart.splice(itemIndex, 1);
-            } else if (newQty > item.stock) {
-                alert('Stok tidak cukup!');
-            }
-        }
-        renderCart();
-    }
+function processCheckout() {
+    if (isProcessing) return;
+    if (!cart.length) return showToast('Keranjang kosong!','warning');
+    let total = parseInt(document.getElementById('totalAmountInput').value);
+    let pay = parseInt(document.getElementById('payAmountInput').value);
+    let method = document.querySelector('input[name="payment_method"]:checked').value;
+    if (isNaN(pay)) return showToast('Isi nominal pembayaran!','warning');
+    if (method === 'Cash' && pay < total) return showToast('Uang kurang! Kurang ' + fmt(total - pay),'danger');
 
-    function clearCart() {
-        if(confirm('Hapus semua isi keranjang?')) {
-            cart = [];
-            renderCart();
-        }
-    }
+    // Anti double-click
+    isProcessing = true;
+    let btn = document.getElementById('checkoutBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
 
-    function togglePaymentMethod(method) {
-        if(method === 'QRIS') {
-            document.getElementById('cashInputBox').style.display = 'none';
-            // Set otomatis payAmount = total jika QRIS selected
-            document.getElementById('payAmountInput').value = document.getElementById('totalAmountInput').value;
-        } else {
-            document.getElementById('cashInputBox').style.display = 'block';
-            document.getElementById('payAmountInput').value = ''; // Kosongkan lagi agar diisi kasir
-        }
-    }
+    document.getElementById('checkoutForm').submit();
+}
 
-    function renderCart() {
-        let cartItemsBody = document.getElementById('cartItems');
-        let hiddenInputsContainer = document.getElementById('hiddenInputs');
-        let subtotal = 0;
-        
-        cartItemsBody.innerHTML = '';
-        hiddenInputsContainer.innerHTML = '';
+function showToast(msg, type='info') {
+    let c = document.getElementById('toastContainer');
+    let t = document.createElement('div');
+    t.className = `toast align-items-center text-bg-${type} border-0 show animate-slide`;
+    t.setAttribute('role','alert');
+    t.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    c.appendChild(t);
+    bootstrap.Toast.getOrCreateInstance(t, {delay:3000}).show();
+    t.addEventListener('hidden.bs.toast', () => t.remove());
+}
 
-        if (cart.length === 0) {
-            cartItemsBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-5"><i class="fa-solid fa-cart-arrow-down fa-2x mb-2 opacity-50"></i><br>Pesanan kosong</td></tr>';
-        }
+// Keyboard shortcut: Enter to pay
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); processCheckout(); }
+});
 
-        cart.forEach((item, index) => {
-            let itemSubtotal = item.price * item.qty;
-            subtotal += itemSubtotal;
-
-            cartItemsBody.innerHTML += `
-                <tr>
-                    <td class="fw-bold text-dark px-3 py-3" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.name}">${item.name}<br>
-                        <small class="text-muted fw-normal">${formatRupiah(item.price)}</small>
-                    </td>
-                    <td width="100">
-                        <div class="input-group input-group-sm">
-                            <button class="btn btn-outline-secondary px-2" onclick="updateQty(${item.id}, -1)">-</button>
-                            <input type="text" class="form-control text-center px-0 fw-bold bg-white" value="${item.qty}" readonly>
-                            <button class="btn btn-outline-secondary px-2" onclick="updateQty(${item.id}, 1)">+</button>
-                        </div>
-                    </td>
-                    <td class="text-end fw-bold text-dark">${formatRupiah(itemSubtotal)}</td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-link text-danger p-0" onclick="updateQty(${item.id}, -${item.qty})"><i class="fa-solid fa-circle-xmark fa-lg"></i></button>
-                    </td>
-                </tr>
-            `;
-
-            hiddenInputsContainer.innerHTML += `
-                <input type="hidden" name="cart[${index}][id]" value="${item.id}">
-                <input type="hidden" name="cart[${index}][qty]" value="${item.qty}">
-                <input type="hidden" name="cart[${index}][price]" value="${item.price}">
-            `;
-        });
-
-        // Set Subtotal Raw
-        document.getElementById('subtotalDisplay').innerText = formatRupiah(subtotal);
-        document.getElementById('subtotalInput').value = subtotal;
-
-        calculateGrandTotal();
-    }
-
-    function calculateGrandTotal() {
-        let subtotal = parseInt(document.getElementById('subtotalInput').value) || 0;
-        
-        let discount = parseInt(document.getElementById('discountInputRaw').value) || 0;
-        let taxPercent = parseFloat(document.getElementById('taxPercentage').value) || 0;
-
-        // Validasi Diskon tidak boleh melebihi subtotal
-        if (discount > subtotal) {
-            discount = subtotal;
-            document.getElementById('discountInputRaw').value = discount;
-        }
-
-        let afterDiscount = subtotal - discount;
-        
-        // Kalkulasi Pajak Nominal dari (Subtotal - Diskon)
-        let nominalTax = (afterDiscount * taxPercent) / 100;
-        document.getElementById('taxNominalInput').value = nominalTax;
-
-        let grandTotal = afterDiscount + nominalTax;
-        
-        document.getElementById('totalDisplay').innerText = formatRupiah(grandTotal);
-        document.getElementById('totalAmountInput').value = grandTotal;
-
-        // Auto update input bayar jika sedang dalam mode QRIS (uang pas otomatis)
-        let method = document.querySelector('input[name="payment_method"]:checked').value;
-        if(method === 'QRIS') {
-            document.getElementById('payAmountInput').value = grandTotal;
-        }
-    }
-
-    function processCheckout() {
-        if (cart.length === 0) {
-            alert('Keranjang masih kosong!');
-            return;
-        }
-
-        let totalAmount = parseInt(document.getElementById('totalAmountInput').value);
-        let payAmount = parseInt(document.getElementById('payAmountInput').value);
-        let method = document.querySelector('input[name="payment_method"]:checked').value;
-
-        if (isNaN(payAmount)) {
-            alert('Harap isi nominal uang pelanggan!');
-            document.getElementById('payAmountInput').focus();
-            return;
-        }
-
-        if (method === 'Cash' && payAmount < totalAmount) {
-            alert('Uang pelanggan tidak cukup! Kurang ' + formatRupiah(totalAmount - payAmount));
-            return;
-        }
-
-        if(confirm('Apakah Anda yakin pesanan sudah sesuai?')) {
-            document.getElementById('checkoutForm').submit();
-        }
-    }
-
-    renderCart(); // Initial
+renderCart();
 </script>
 @endpush

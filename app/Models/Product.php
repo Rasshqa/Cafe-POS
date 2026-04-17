@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    use \App\Traits\BelongsToStore;
+
     protected $fillable = ['category_id', 'name', 'price', 'stock', 'image'];
 
     public function category()
