@@ -1,4 +1,4 @@
-# ☕ Cafe POS Pro
+# ☕Kasir Pro
 
 A modern, responsive, and production-ready Point of Sales (POS) web application for cafes and small businesses. Built with Laravel, this system provides a complete solution for managing sales, inventory, suppliers, and payments with a clean and interactive user experience.
 
