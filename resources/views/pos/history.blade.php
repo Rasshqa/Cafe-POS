@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.master')
 
 @section('content')
 <h4 class="mb-4">Riwayat Transaksi</h4>

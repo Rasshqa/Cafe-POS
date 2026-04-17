@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -22,8 +23,16 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-        Product::create($request->all());
+
+        $data = $request->all();
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        Product::create($data);
         return redirect()->route('products.index')->with('success', 'Produk ditambahkan!');
     }
 
@@ -34,13 +43,27 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-        $product->update($request->all());
+
+        $data = $request->all();
+
+        if ($request->hasFile('image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $data['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $product->update($data);
         return redirect()->route('products.index')->with('success', 'Produk diupdate!');
     }
 
     public function destroy(Product $product)
     {
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
+        }
         $product->delete();
         return redirect()->route('products.index')->with('success', 'Produk dihapus!');
     }
